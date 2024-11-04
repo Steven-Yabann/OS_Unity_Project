@@ -1,26 +1,25 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
-    public GameObject processPrefab;
-    public Transform queuePanel;
-    public Transform cpuPanel;
+    public GameObject processPrefab; // Reference to the Process prefab
+    public Transform queuePanel;     // Reference to the Queue panel
+    public Transform cpuPanel;       // Reference to the CPU panel
 
     private List<Process> processQueue = new List<Process>();
     private float currentTime = 0f;
 
     private void Start()
     {
-        // Initialize some example processes
         InitializeProcesses();
         StartCoroutine(FCFSSimulation());
     }
 
     private void InitializeProcesses()
     {
-        // Example process setup
         CreateProcess("P1", 0f, 3f);
         CreateProcess("P2", 2f, 6f);
         CreateProcess("P3", 4f, 1f);
@@ -38,23 +37,18 @@ public class GameManager : MonoBehaviour
     {
         foreach (Process process in processQueue)
         {
-            // Wait until the process's arrival time
             while (currentTime < process.arrivalTime)
             {
                 yield return null;
                 currentTime += Time.deltaTime;
             }
-
-            // Execute process
             yield return StartCoroutine(ExecuteProcess(process));
         }
     }
 
     private IEnumerator ExecuteProcess(Process process)
     {
-        process.transform.SetParent(cpuPanel); // Move process to CPU area
-        process.UpdateText();
-
+        process.transform.SetParent(cpuPanel); // Move to CPU
         float startTime = currentTime;
         float burstDuration = process.burstTime;
 
@@ -64,28 +58,8 @@ public class GameManager : MonoBehaviour
             currentTime += Time.deltaTime;
         }
 
-        // Mark process as completed
         process.waitingTime = startTime - process.arrivalTime;
         process.turnaroundTime = currentTime - process.arrivalTime;
-        process.transform.SetParent(null); // Remove from CPU
+        process.transform.SetParent(null);
     }
-
-//     private void DisplayMetrics()
-// {
-//     float totalWaitingTime = 0f;
-//     float totalTurnaroundTime = 0f;
-
-//     foreach (Process process in processQueue)
-//     {
-//         totalWaitingTime += process.waitingTime;
-//         totalTurnaroundTime += process.turnaroundTime;
-//     }
-
-//     float avgWaitingTime = totalWaitingTime / processQueue.Count;
-//     float avgTurnaroundTime = totalTurnaroundTime / processQueue.Count;
-
-//     // Display the averages on UI elements
-//     waitingTimeText.text = $"Average Waiting Time: {avgWaitingTime:F2}";
-//     turnaroundTimeText.text = $"Average Turnaround Time: {avgTurnaroundTime:F2}";
-// }
 }
