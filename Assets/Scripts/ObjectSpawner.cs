@@ -6,13 +6,16 @@ public class HorizontalSpawner : MonoBehaviour
     public GameObject objectToSpawn;        // Reference to the Prefab to spawn
     public float spacing = 1.5f;            // Distance between squares in a row
     private int spawnCount = 0;             // Tracks the number of objects spawned in the current row
-    private int rowCount = 0;                // Tracks the number of rows spawned
+    private int rowCount = 0;               // Tracks the number of rows spawned
     public float moveSpeed = 2f;            // Speed at which squares move up
-    private bool isSpawningActive = false;   // Flag to check if spawning is active
+    private bool isSpawningActive = false;  // Flag to check if spawning is active
 
     private float stopHeight;                // Height at which squares stop moving
-    private float lastRowStopY = 0f;        // Y position of the last row's stop height
-    private float initialSpawnY = 0f;       // Y position to spawn the first row
+    private float lastRowStopY = 0f;         // Y position of the last row's stop height
+    private float initialSpawnY = 0f;        // Y position to spawn the first row
+
+    private Color[] colors = { Color.red, Color.green, Color.blue }; // Colors for each row
+    private int currentColorIndex = 0;      // Index to track the current color
 
     void Start()
     {
@@ -50,20 +53,29 @@ public class HorizontalSpawner : MonoBehaviour
         // Limit the total squares in one row to 5
         if (spawnCount >= 5)
         {
-            // Reset the spawn count for a new row
+            // Reset the spawn count for a new row and increment row count
             spawnCount = 0;
-            
+            rowCount++;
+            // Cycle to the next color in the array
+            currentColorIndex = (currentColorIndex + 1) % colors.Length;
         }
 
         // Calculate the y position based on the number of rows and spacing
-        float spawnY = initialSpawnY + (rowCount * spacing); // Spawn below the previous row
+        float spawnY = initialSpawnY + (rowCount * spacing);
 
         // Calculate the x position based on the current spawn count
         float spawnX = spawnCount * spacing;
 
         // Spawn the object at the calculated position
         Vector3 spawnPosition = new Vector3(spawnX, spawnY, 0);
-        Instantiate(objectToSpawn, spawnPosition, Quaternion.identity);
+        GameObject newSquare = Instantiate(objectToSpawn, spawnPosition, Quaternion.identity);
+
+        // Assign the color to the square's material
+        Renderer renderer = newSquare.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            renderer.material.color = colors[currentColorIndex];
+        }
 
         // Increment the spawn count
         spawnCount++;
