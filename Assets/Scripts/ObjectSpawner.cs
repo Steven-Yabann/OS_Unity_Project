@@ -1,120 +1,217 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
+using System.Collections.Generic;
 
 public class HorizontalSpawner : MonoBehaviour
 {
-    public GameObject objectToSpawn;        // Reference to the Prefab to spawn
-    public float spacing = 1.5f;            // Distance between squares in a row
-    private int spawnCount = 0;             // Tracks the number of objects spawned in the current row
-    private int rowCount = 0;               // Tracks the number of rows spawned
-    public float moveSpeed = 2f;            // Speed at which squares move up
-    private bool isSpawningActive = false;  // Flag to check if spawning is active
+    public GameObject objectToSpawn;
+    public float spacing = 1.5f;
+    private int spawnCount = 0;
+    private List<RowData> rows = new List<RowData>(); // List to store each row's data
+    public float moveSpeed = 2f;
+    private bool isSpawningActive = false;
 
-    private float stopHeight;                // Height at which squares stop moving
-    private float lastRowStopY = 0f;         // Y position of the last row's stop height
-    private float initialSpawnY = 0f;        // Y position to spawn the first row
+    private float stopHeight;
+    private float initialSpawnY = 0f;
 
-    private Color[] colors = { Color.red, Color.green, Color.blue }; // Colors for each row
-    private int currentColorIndex = 0;      // Index to track the current color
+    private bool isFCFS = true; // True for FCFS, False for SRTF
+
+    public Button fcfsButton; // Button to select FCFS
+    public Button srtfButton; // Button to select SRTF
+    public Button startButton; // Button to start the simulation
 
     void Start()
     {
-        // Calculate stopping height based on camera size
-        float screenHeight = Camera.main.orthographicSize * 2; // Total height of the screen
-        stopHeight = screenHeight * 0.35f; // Adjust this value to set the stop height
-        
-        // Set the initial spawn Y position based on the screen bottom
+        float screenHeight = Camera.main.orthographicSize * 2;
+        stopHeight = screenHeight * 0.35f;
         initialSpawnY = Camera.main.ViewportToWorldPoint(new Vector3(0, 0, Camera.main.nearClipPlane)).y + 1f;
+
+        // Add listeners to buttons
+        fcfsButton.onClick.AddListener(SelectFCFS);
+        srtfButton.onClick.AddListener(SelectSRTF);
+        startButton.onClick.AddListener(StartSimulation);
     }
 
     void Update()
     {
-        // Check for Space key press to spawn squares
+        // Space to spawn squares in a row
         if (Input.GetKeyDown(KeyCode.Space))
         {
             SpawnSingleSquare();
         }
 
-        // Check for Up Arrow key press to start moving squares
-        if (Input.GetKeyDown(KeyCode.UpArrow))
+        // Enter to start a new row
+        if (Input.GetKeyDown(KeyCode.Return) && spawnCount > 0)
         {
-            isSpawningActive = true; // Activate movement
+            StartNewRow();
         }
 
-        // Move squares up the screen if spawning is active
-        if (isSpawningActive)
+        // Up Arrow to start moving squares
+        if (Input.GetKeyDown(KeyCode.UpArrow) && isSpawningActive)
         {
-            MoveSquaresUp();
+            if (isFCFS)
+                ProcessFCFS();
+            else
+                ProcessSRTF();
         }
+    }
+
+    void SelectFCFS()
+    {
+        isFCFS = true;
+        Debug.Log("Selected FCFS scheduling");
+    }
+
+    void SelectSRTF()
+    {
+        isFCFS = false;
+        Debug.Log("Selected SRTF scheduling");
+    }
+
+    void StartSimulation()
+    {
+        isSpawningActive = true;
+        Debug.Log("Simulation started");
     }
 
     void SpawnSingleSquare()
     {
-        // Limit the total squares in one row to 5
         if (spawnCount >= 5)
         {
-            // Reset the spawn count for a new row and increment row count
-            spawnCount = 0;
-            rowCount++;
-            // Cycle to the next color in the array
-            currentColorIndex = (currentColorIndex + 1) % colors.Length;
+            StartNewRow();
         }
 
-        // Calculate the y position based on the number of rows and spacing
-        float spawnY = initialSpawnY + (rowCount * spacing);
-
-        // Calculate the x position based on the current spawn count
+        float spawnY = initialSpawnY + (rows.Count * spacing);
         float spawnX = spawnCount * spacing;
 
-        // Spawn the object at the calculated position
         Vector3 spawnPosition = new Vector3(spawnX, spawnY, 0);
-        GameObject newSquare = Instantiate(objectToSpawn, spawnPosition, Quaternion.identity);
+        GameObject square = Instantiate(objectToSpawn, spawnPosition, Quaternion.identity);
 
-        // Assign the color to the square's material
-        Renderer renderer = newSquare.GetComponent<Renderer>();
-        if (renderer != null)
-        {
-            renderer.material.color = colors[currentColorIndex];
-        }
+        if (rows.Count == 0 || spawnCount == 0)
+            rows.Add(new RowData { squares = new List<GameObject>(), spawnTime = Time.time });
 
-        // Increment the spawn count
+        rows[rows.Count - 1].squares.Add(square);
         spawnCount++;
     }
 
-    void MoveSquaresUp()
+    void StartNewRow()
     {
-        // Find all objects of the prefab type with the "Square" tag and move them up
-        GameObject[] squares = GameObject.FindGameObjectsWithTag("Square"); // Use "Square" tag directly
+        spawnCount = 0;
+    }
 
-        foreach (GameObject square in squares)
+    void ProcessFCFS()
+    {
+        if (rows.Count > 0)
         {
-            // Move each square upwards at the specified speed
-            float newYPosition = square.transform.position.y + (moveSpeed * Time.deltaTime);
+            RowData currentRow = rows[0];
 
-            // Stop moving if the new position exceeds the stop height
-            if (newYPosition >= stopHeight)
+            if (currentRow.IsAtStopHeight(stopHeight))
             {
-                newYPosition = stopHeight; // Set to stop height
+                StartCoroutine(VanishRow(currentRow));
+                rows.RemoveAt(0);
             }
-
-            // Update the square's position
-            square.transform.position = new Vector3(square.transform.position.x, newYPosition, square.transform.position.z);
-        }
-
-        // Start vanishing squares once they reach the stop height
-        if (squares.Length > 0 && squares[0].transform.position.y >= stopHeight)
-        {
-            StartCoroutine(VanishSquares(squares));
+            else
+            {
+                foreach (var square in currentRow.squares)
+                {
+                    float newYPosition = square.transform.position.y + (moveSpeed * Time.deltaTime);
+                    if (newYPosition > stopHeight) newYPosition = stopHeight;
+                    square.transform.position = new Vector3(square.transform.position.x, newYPosition, 0);
+                }
+            }
         }
     }
 
-    private IEnumerator VanishSquares(GameObject[] squares)
+    void ProcessSRTF()
     {
-        foreach (GameObject square in squares)
+        if (rows.Count > 0)
         {
-            // Wait for 1.5 seconds before destroying the square
-            yield return new WaitForSeconds(1.5f);
-            Destroy(square); // Remove the square from the scene
+            RowData shortestRow = null;
+            float shortestRemainingTime = Mathf.Infinity;
+
+            foreach (var row in rows)
+            {
+                float remainingTime = row.GetRemainingTime(stopHeight, moveSpeed);
+                if (remainingTime < shortestRemainingTime)
+                {
+                    shortestRemainingTime = remainingTime;
+                    shortestRow = row;
+                }
+            }
+
+            if (shortestRow != null)
+            {
+                foreach (var square in shortestRow.squares)
+                {
+                    float newYPosition = square.transform.position.y + (moveSpeed * Time.deltaTime);
+                    if (newYPosition > stopHeight) newYPosition = stopHeight;
+                    square.transform.position = new Vector3(square.transform.position.x, newYPosition, 0);
+                }
+
+                if (shortestRow.IsAtStopHeight(stopHeight))
+                {
+                    StartCoroutine(VanishRow(shortestRow));
+                    rows.Remove(shortestRow);
+                }
+            }
         }
+    }
+
+    IEnumerator VanishRow(RowData row)
+    {
+        float vanishDelay = 1.5f;
+        row.turnaroundTime = Time.time - row.spawnTime;
+
+        foreach (GameObject square in row.squares)
+        {
+            yield return new WaitForSeconds(vanishDelay);
+            Destroy(square);
+        }
+
+        Debug.Log("Row Waiting Time: " + row.GetWaitingTime() + ", Turnaround Time: " + row.turnaroundTime);
+
+        if (rows.Count == 0) CalculateAverageTimes();
+    }
+
+    void CalculateAverageTimes()
+    {
+        float totalWaitingTime = 0f;
+        float totalTurnaroundTime = 0f;
+
+        foreach (RowData row in rows)
+        {
+            totalWaitingTime += row.GetWaitingTime();
+            totalTurnaroundTime += row.turnaroundTime;
+        }
+
+        float avgWaitingTime = totalWaitingTime / rows.Count;
+        float avgTurnaroundTime = totalTurnaroundTime / rows.Count;
+
+        Debug.Log("Average Waiting Time: " + avgWaitingTime);
+        Debug.Log("Average Turnaround Time: " + avgTurnaroundTime);
+    }
+}
+
+public class RowData
+{
+    public List<GameObject> squares = new List<GameObject>();
+    public float spawnTime;
+    public float turnaroundTime;
+
+    public bool IsAtStopHeight(float stopHeight)
+    {
+        return squares.TrueForAll(square => square.transform.position.y >= stopHeight);
+    }
+
+    public float GetRemainingTime(float stopHeight, float moveSpeed)
+    {
+        float maxDistance = Mathf.Max(squares.ConvertAll(square => stopHeight - square.transform.position.y).ToArray());
+        return maxDistance / moveSpeed;
+    }
+
+    public float GetWaitingTime()
+    {
+        return turnaroundTime - (squares.Count * 1.5f);
     }
 }
