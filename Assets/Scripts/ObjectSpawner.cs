@@ -4,7 +4,7 @@ using System.Collections;
 public class HorizontalSpawner : MonoBehaviour
 {
     public GameObject objectToSpawn;        // Reference to the Prefab to spawn
-    public float spacing = 1.5f;            // Distance between rows
+    public float spacing = 1.5f;            // Distance between squares in a row
     private int spawnCount = 0;             // Tracks the number of objects spawned in the current row
     private int rowCount = 0;                // Tracks the number of rows spawned
     public float moveSpeed = 2f;            // Speed at which squares move up
@@ -12,12 +12,16 @@ public class HorizontalSpawner : MonoBehaviour
 
     private float stopHeight;                // Height at which squares stop moving
     private float lastRowStopY = 0f;        // Y position of the last row's stop height
+    private float initialSpawnY = 0f;       // Y position to spawn the first row
 
     void Start()
     {
         // Calculate stopping height based on camera size
         float screenHeight = Camera.main.orthographicSize * 2; // Total height of the screen
         stopHeight = screenHeight * 0.35f; // Adjust this value to set the stop height
+        
+        // Set the initial spawn Y position based on the screen bottom
+        initialSpawnY = Camera.main.ViewportToWorldPoint(new Vector3(0, 0, Camera.main.nearClipPlane)).y + 1f;
     }
 
     void Update()
@@ -48,12 +52,11 @@ public class HorizontalSpawner : MonoBehaviour
         {
             // Reset the spawn count for a new row
             spawnCount = 0;
-            rowCount++; // Increment the row count
+            
         }
 
         // Calculate the y position based on the number of rows and spacing
-        float screenBottomY = Camera.main.ViewportToWorldPoint(new Vector3(0, 0, Camera.main.nearClipPlane)).y + 1f;
-        float spawnY = screenBottomY + (rowCount * spacing); // Spawn below the previous row
+        float spawnY = initialSpawnY + (rowCount * spacing); // Spawn below the previous row
 
         // Calculate the x position based on the current spawn count
         float spawnX = spawnCount * spacing;
