@@ -1,15 +1,17 @@
 using UnityEngine;
+using System.Collections;
 
 public class HorizontalSpawner : MonoBehaviour
 {
     public GameObject objectToSpawn;        // Reference to the Prefab to spawn
-    public float spacing = 1.5f;            // Distance between objects
+    public float spacing = 1.5f;            // Distance between rows
     private int spawnCount = 0;             // Tracks the number of objects spawned in the current row
     private int rowCount = 0;                // Tracks the number of rows spawned
     public float moveSpeed = 2f;            // Speed at which squares move up
     private bool isSpawningActive = false;   // Flag to check if spawning is active
 
     private float stopHeight;                // Height at which squares stop moving
+    private float lastRowStopY = 0f;        // Y position of the last row's stop height
 
     void Start()
     {
@@ -51,18 +53,14 @@ public class HorizontalSpawner : MonoBehaviour
 
         // Calculate the y position based on the number of rows and spacing
         float screenBottomY = Camera.main.ViewportToWorldPoint(new Vector3(0, 0, Camera.main.nearClipPlane)).y + 1f;
-        // Spawn below the previous row and above the last spawned row
-        float spawnY = screenBottomY + (rowCount * spacing); 
+        float spawnY = screenBottomY + (rowCount * spacing); // Spawn below the previous row
 
         // Calculate the x position based on the current spawn count
         float spawnX = spawnCount * spacing;
 
         // Spawn the object at the calculated position
         Vector3 spawnPosition = new Vector3(spawnX, spawnY, 0);
-        GameObject newSquare = Instantiate(objectToSpawn, spawnPosition, Quaternion.identity);
-        
-        // Optionally, log to check if the square is spawned correctly
-        Debug.Log("Spawned square: " + newSquare.name);
+        Instantiate(objectToSpawn, spawnPosition, Quaternion.identity);
 
         // Increment the spawn count
         spawnCount++;
@@ -77,7 +75,7 @@ public class HorizontalSpawner : MonoBehaviour
         {
             // Move each square upwards at the specified speed
             float newYPosition = square.transform.position.y + (moveSpeed * Time.deltaTime);
-            
+
             // Stop moving if the new position exceeds the stop height
             if (newYPosition >= stopHeight)
             {
@@ -86,6 +84,22 @@ public class HorizontalSpawner : MonoBehaviour
 
             // Update the square's position
             square.transform.position = new Vector3(square.transform.position.x, newYPosition, square.transform.position.z);
+        }
+
+        // Start vanishing squares once they reach the stop height
+        if (squares.Length > 0 && squares[0].transform.position.y >= stopHeight)
+        {
+            StartCoroutine(VanishSquares(squares));
+        }
+    }
+
+    private IEnumerator VanishSquares(GameObject[] squares)
+    {
+        foreach (GameObject square in squares)
+        {
+            // Wait for 1.5 seconds before destroying the square
+            yield return new WaitForSeconds(1.5f);
+            Destroy(square); // Remove the square from the scene
         }
     }
 }
