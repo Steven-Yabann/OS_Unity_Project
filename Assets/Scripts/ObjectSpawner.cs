@@ -21,6 +21,18 @@ public class HorizontalSpawner : MonoBehaviour
     public Button srtfButton; // Button to select SRTF
     public Button startButton; // Button to start the simulation
 
+    // Array of colors to cycle through for each row
+    private Color[] rowColors = new Color[]
+    {
+        Color.red,
+        Color.green,
+        Color.blue,
+        Color.yellow,
+        Color.cyan,
+        Color.magenta,
+        Color.white,
+    };
+
     void Start()
     {
         float screenHeight = Camera.main.orthographicSize * 2;
@@ -88,6 +100,12 @@ public class HorizontalSpawner : MonoBehaviour
         Vector3 spawnPosition = new Vector3(spawnX, spawnY, 0);
         GameObject square = Instantiate(objectToSpawn, spawnPosition, Quaternion.identity);
 
+        // Set color based on the current row index
+        if (rows.Count > 0)
+        {
+            square.GetComponent<Renderer>().material.color = GetRowColor(rows.Count);
+        }
+
         if (rows.Count == 0 || spawnCount == 0)
             rows.Add(new RowData { squares = new List<GameObject>(), spawnTime = Time.time });
 
@@ -97,7 +115,7 @@ public class HorizontalSpawner : MonoBehaviour
 
     void StartNewRow()
     {
-        spawnCount = 0;
+        spawnCount = -1;
     }
 
     void ProcessFCFS()
@@ -192,6 +210,12 @@ public class HorizontalSpawner : MonoBehaviour
 
         Debug.Log("Average Waiting Time: " + avgWaitingTime);
         Debug.Log("Average Turnaround Time: " + avgTurnaroundTime);
+    }
+
+    Color GetRowColor(int rowIndex)
+    {
+        // Return a color based on the row index, cycling through the rowColors array
+        return rowColors[rowIndex % rowColors.Length];
     }
 }
 
