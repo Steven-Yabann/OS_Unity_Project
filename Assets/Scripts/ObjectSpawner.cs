@@ -47,8 +47,8 @@ public class HorizontalSpawner : MonoBehaviour
             StartNewRow();
         }
 
-        // Up Arrow to start moving squares
-        if (Input.GetKeyDown(KeyCode.UpArrow) && isSpawningActive)
+        // Move squares continuously if the simulation is active
+        if (isSpawningActive)
         {
             if (isFCFS)
                 ProcessFCFS();
@@ -106,19 +106,19 @@ public class HorizontalSpawner : MonoBehaviour
         {
             RowData currentRow = rows[0];
 
+            // Move squares upward
+            foreach (var square in currentRow.squares)
+            {
+                float newYPosition = square.transform.position.y + (moveSpeed * Time.deltaTime);
+                if (newYPosition > stopHeight) newYPosition = stopHeight;
+                square.transform.position = new Vector3(square.transform.position.x, newYPosition, 0);
+            }
+
+            // Check if the current row has reached the stop height
             if (currentRow.IsAtStopHeight(stopHeight))
             {
                 StartCoroutine(VanishRow(currentRow));
                 rows.RemoveAt(0);
-            }
-            else
-            {
-                foreach (var square in currentRow.squares)
-                {
-                    float newYPosition = square.transform.position.y + (moveSpeed * Time.deltaTime);
-                    if (newYPosition > stopHeight) newYPosition = stopHeight;
-                    square.transform.position = new Vector3(square.transform.position.x, newYPosition, 0);
-                }
             }
         }
     }
@@ -142,6 +142,7 @@ public class HorizontalSpawner : MonoBehaviour
 
             if (shortestRow != null)
             {
+                // Move squares upward
                 foreach (var square in shortestRow.squares)
                 {
                     float newYPosition = square.transform.position.y + (moveSpeed * Time.deltaTime);
@@ -149,6 +150,7 @@ public class HorizontalSpawner : MonoBehaviour
                     square.transform.position = new Vector3(square.transform.position.x, newYPosition, 0);
                 }
 
+                // Check if the shortest row has reached the stop height
                 if (shortestRow.IsAtStopHeight(stopHeight))
                 {
                     StartCoroutine(VanishRow(shortestRow));
