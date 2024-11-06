@@ -6,7 +6,7 @@ using System.Collections.Generic;
 public class HorizontalSpawner : MonoBehaviour
 {
     public GameObject objectToSpawn;
-    public float spacing = 1.5f;
+    public float spacing = 1.5f; // Distance between rows
     private int spawnCount = 0;
     private List<RowData> rows = new List<RowData>(); // List to store each row's data
     public float moveSpeed = 2f;
@@ -54,7 +54,7 @@ public class HorizontalSpawner : MonoBehaviour
         }
 
         // Enter to start a new row
-        if (Input.GetKeyDown(KeyCode.Return) && spawnCount > 0)
+        if (Input.GetKeyDown(KeyCode.Return))
         {
             StartNewRow();
         }
@@ -89,11 +89,13 @@ public class HorizontalSpawner : MonoBehaviour
 
     void SpawnSingleSquare()
     {
+        // Check if maximum squares per row are reached
         if (spawnCount >= 5)
         {
             StartNewRow();
         }
 
+        // Calculate the y position based on the number of rows and spacing
         float spawnY = initialSpawnY + (rows.Count * spacing);
         float spawnX = spawnCount * spacing;
 
@@ -115,7 +117,8 @@ public class HorizontalSpawner : MonoBehaviour
 
     void StartNewRow()
     {
-        spawnCount = -1;
+        // Reset the spawn count for a new row
+        spawnCount = 0;
     }
 
     void ProcessFCFS()
