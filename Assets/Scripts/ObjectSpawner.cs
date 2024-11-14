@@ -6,22 +6,22 @@ using System.Collections.Generic;
 public class HorizontalSpawner : MonoBehaviour
 {
     public GameObject objectToSpawn;
-    public float spacing = 1.5f; // Distance between rows
+    public float spacing = 1.5f;
     private int spawnCount = 0;
-    private List<RowData> rows = new List<RowData>(); // List to store each row's data
+    private List<RowData> rows = new List<RowData>();
     public float moveSpeed = 2f;
     private bool isSpawningActive = false;
 
     private float stopHeight;
     private float initialSpawnY = 0f;
 
-    private bool isFCFS = true; // True for FCFS, False for SRTF
+    private bool isFCFS = true; 
 
     public Button fcfsButton; // Button to select FCFS
     public Button srtfButton; // Button to select SRTF
     public Button startButton; // Button to start the simulation
 
-    // Array of colors to cycle through for each row
+    
     private Color[] rowColors = new Color[]
     {
         Color.red,
@@ -39,7 +39,7 @@ public class HorizontalSpawner : MonoBehaviour
         stopHeight = screenHeight * 0.35f;
         initialSpawnY = Camera.main.ViewportToWorldPoint(new Vector3(0, 0, Camera.main.nearClipPlane)).y + 1f;
 
-        // Add listeners to buttons
+        
         fcfsButton.onClick.AddListener(SelectFCFS);
         srtfButton.onClick.AddListener(SelectSRTF);
         startButton.onClick.AddListener(StartSimulation);
@@ -47,19 +47,19 @@ public class HorizontalSpawner : MonoBehaviour
 
     void Update()
     {
-        // Space to spawn squares in a row
+        
         if (Input.GetKeyDown(KeyCode.Space))
         {
             SpawnSingleSquare();
         }
 
-        // Enter to start a new row
+        
         if (Input.GetKeyDown(KeyCode.Return))
         {
             StartNewRow();
         }
 
-        // Move squares continuously if the simulation is active
+        
         if (isSpawningActive)
         {
             if (isFCFS)
@@ -89,20 +89,20 @@ public class HorizontalSpawner : MonoBehaviour
 
     void SpawnSingleSquare()
     {
-        // Check if maximum squares per row are reached
+        
         if (spawnCount >= 5)
         {
             StartNewRow();
         }
 
-        // Calculate the y position based on the number of rows and spacing
-        float spawnY = initialSpawnY + (rows.Count * spacing);
+        
+        float spawnY = initialSpawnY + (1 * spacing);
         float spawnX = spawnCount * spacing;
 
         Vector3 spawnPosition = new Vector3(spawnX, spawnY, 0);
         GameObject square = Instantiate(objectToSpawn, spawnPosition, Quaternion.identity);
 
-        // Set color based on the current row index
+        
         if (rows.Count > 0)
         {
             square.GetComponent<Renderer>().material.color = GetRowColor(rows.Count);
