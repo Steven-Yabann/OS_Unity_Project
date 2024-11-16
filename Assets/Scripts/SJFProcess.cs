@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 
-public class CPUProcessSimulator : MonoBehaviour
+public class SJFProcess : MonoBehaviour
 {
     [Header("Process Settings")]
     public GameObject[] processSprites;   // Array of available sprites
@@ -14,11 +14,12 @@ public class CPUProcessSimulator : MonoBehaviour
     public Dropdown spriteDropdown;       // Dropdown to select the sprite
     public Dropdown processingTimeDropdown; // Dropdown for selecting processing time
     public Button addButton;              // Button to add a process
-    public Button startSimulationButton;  // Button to start the FCFS simulation
+    public Button startSimulationButton;  // Button to start the SJF simulation
     public Text resultsText;              // UI Text to display results
 
     private List<Process> processes = new List<Process>(); // List to store processes
-    private int spawnCount = 0;           // Tracks position of spawned processes in a row
+
+    private List<Process> completedProcesses = new List<Process>();
     private bool isProcessing = false;    // Flag to indicate if a process is being executed
     private float currentTime = 0f;       // Tracks simulation time
 
@@ -31,8 +32,8 @@ public class CPUProcessSimulator : MonoBehaviour
         // Set up the Add button to call AddProcess when clicked
         addButton.onClick.AddListener(AddProcess);
 
-        // Set up the Start Simulation button to begin FCFS processing
-        startSimulationButton.onClick.AddListener(StartFCFSSimulation);
+        // Set up the Start Simulation button to begin SJF processing
+        startSimulationButton.onClick.AddListener(StartSJFSimulation);
     }
 
     // Populate the sprite dropdown with sprite names
@@ -49,6 +50,7 @@ public class CPUProcessSimulator : MonoBehaviour
 
         spriteDropdown.AddOptions(options); // Add the list of sprite names to the dropdown
     }
+
 
     // Populate the processing time dropdown with options from 1 to 6
     void PopulateProcessingTimeDropdown()
@@ -67,73 +69,87 @@ public class CPUProcessSimulator : MonoBehaviour
     // Method to add a new process based on user input
     void AddProcess()
     {
-        // Get the selected sprite index from the dropdown
         int selectedSpriteIndex = spriteDropdown.value;
-
-        // Get the selected processing time from the dropdown
         int selectedProcessingTimeIndex = processingTimeDropdown.value;
-        float processingTime = selectedProcessingTimeIndex + 1; // Dropdown indices start at 0 (1 second = index 0)
+        float processingTime = selectedProcessingTimeIndex + 1;
 
-        // Calculate spawn position based on the row and column
-        float spawnX = spawnCount * spacing; // Position along the X-axis
-        float spawnY = -4.5f;  // Fixed Y position at the bottom of the screen
+        float spawnX = processes.Count * spacing;
+        float spawnY = -4.5f;
 
         Vector3 spawnPosition = new Vector3(spawnX, spawnY, 0);
-
-        // Instantiate the selected sprite as the process
         GameObject selectedSprite = Instantiate(processSprites[selectedSpriteIndex], spawnPosition, Quaternion.identity);
 
-        // Create a new process instance and add it to the list
+        // Debug arrival time
+        Debug.Log($"Process Added: Arrival Time = {currentTime}, Processing Time = {processingTime}");
+
         Process newProcess = new Process(selectedSprite, processingTime, currentTime);
         processes.Add(newProcess);
-
-        // Increment spawn count for horizontal placement
-        spawnCount++;
     }
 
-    // Start the FCFS simulation
-    void StartFCFSSimulation()
+    // Start the SJF simulation
+    void StartSJFSimulation()
     {
         if (!isProcessing && processes.Count > 0)
         {
-            StartCoroutine(ProcessFCFS());
+            StartCoroutine(ProcessSJF());
         }
     }
 
-    // Coroutine to process tasks in FCFS order
-    IEnumerator ProcessFCFS()
+    // Coroutine to process tasks in SJF order
+    IEnumerator ProcessSJF()
     {
         isProcessing = true;
 
-        foreach (var process in processes)
+        while (processes.Count > 0)
         {
+            // Find the process with the shortest processing time
+            Process shortestProcess = FindShortestProcess();
+
             // Move the process up to simulate execution
-            float targetY = process.processObject.transform.position.y + 3f; // Move up by 3 units
-            while (process.processObject.transform.position.y < targetY)
+            float targetY = shortestProcess.processObject.transform.position.y + 3f;
+            while (shortestProcess.processObject.transform.position.y < targetY)
             {
-                process.processObject.transform.position += Vector3.up * moveSpeed * Time.deltaTime;
+                shortestProcess.processObject.transform.position += Vector3.up * moveSpeed * Time.deltaTime;
                 yield return null;
             }
 
             // Simulate processing time
-            Debug.Log($"Processing {process.processObject.name} for {process.processingTime} seconds...");
-            yield return new WaitForSeconds(process.processingTime);
+            Debug.Log($"Processing {shortestProcess.processObject.name}: Start Time = {currentTime}");
+
+            yield return new WaitForSeconds(shortestProcess.processingTime);
 
             // Calculate completion time, turnaround time, and waiting time
-            process.completionTime = currentTime + process.processingTime;
-            process.turnaroundTime = process.completionTime - process.arrivalTime;
-            process.waitingTime = process.turnaroundTime - process.processingTime;
+            shortestProcess.completionTime = currentTime + shortestProcess.processingTime;
+            shortestProcess.turnaroundTime = shortestProcess.completionTime - shortestProcess.arrivalTime;
+            shortestProcess.waitingTime = shortestProcess.turnaroundTime - shortestProcess.processingTime;
 
-            
-            // Increment simulation time
-            currentTime += process.processingTime;
+            currentTime += shortestProcess.processingTime;
+
+            // Remove from processes list and add to completed list
+            processes.Remove(shortestProcess);
+            completedProcesses.Add(shortestProcess);
+
+            Debug.Log($"Process Completed: Completion Time = {shortestProcess.completionTime}, Turnaround Time = {shortestProcess.turnaroundTime}, Waiting Time = {shortestProcess.waitingTime}");
         }
 
-        // Calculate and display averages
         DisplayResults();
 
         isProcessing = false;
-        Debug.Log("FCFS Simulation Completed!");
+    }
+
+
+    // Find the process with the shortest processing time
+    Process FindShortestProcess()
+    {
+        Process shortest = processes[0];
+        foreach (var process in processes)
+        {
+            if (process.processingTime < shortest.processingTime)
+            {
+                shortest = process;
+            }
+        }
+        return shortest;
     }
 
     // Display results (waiting times, turnaround times, averages)
@@ -144,7 +160,7 @@ public class CPUProcessSimulator : MonoBehaviour
 
         resultsText.text = "Process Results:\n";
 
-        foreach (var process in processes)
+        foreach (var process in completedProcesses)
         {
             resultsText.text += $"{process.processObject.name}: " +
                                 $"WT = {process.waitingTime:F2}, " +
@@ -154,28 +170,22 @@ public class CPUProcessSimulator : MonoBehaviour
             totalTurnaroundTime += process.turnaroundTime;
         }
 
-        float avgWaitingTime = totalWaitingTime / processes.Count;
-        float avgTurnaroundTime = totalTurnaroundTime / processes.Count;
+        // Check to avoid division by zero
+        if (completedProcesses.Count > 0)
+        {
+            float avgWaitingTime = totalWaitingTime / completedProcesses.Count;
+            float avgTurnaroundTime = totalTurnaroundTime / completedProcesses.Count;
 
-        resultsText.text += $"\nAverage Waiting Time: {avgWaitingTime:F2}\n";
-        resultsText.text += $"Average Turnaround Time: {avgTurnaroundTime:F2}";
+            resultsText.text += $"\nAverage Waiting Time: {avgWaitingTime:F2}\n";
+            resultsText.text += $"Average Turnaround Time: {avgTurnaroundTime:F2}";
+        }
+        else
+        {
+            resultsText.text += "\nNo processes to calculate averages.";
+        }
     }
+
 }
 
-[System.Serializable]
-public class Process
-{
-    public GameObject processObject;
-    public float processingTime;
-    public float arrivalTime;
-    public float completionTime;
-    public float turnaroundTime;
-    public float waitingTime;
 
-    public Process(GameObject processObject, float processingTime, float arrivalTime)
-    {
-        this.processObject = processObject;
-        this.processingTime = processingTime;
-        this.arrivalTime = arrivalTime;
-    }
-}
+
