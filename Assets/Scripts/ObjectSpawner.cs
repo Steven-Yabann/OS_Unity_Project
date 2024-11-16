@@ -3,244 +3,178 @@ using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 
-public class HorizontalSpawner : MonoBehaviour
+public class CPUProcessSimulator : MonoBehaviour
 {
-    public GameObject objectToSpawn;
-    public float spacing = 1.5f;
-    private int spawnCount = 0;
-    private List<RowData> rows = new List<RowData>();
-    public float moveSpeed = 2f;
-    private bool isSpawningActive = false;
+    [Header("Process Settings")]
+    public GameObject[] processSprites;   // Array of available sprites
+    public float spacing = 2f;            // Horizontal spacing between processes
+    public float moveSpeed = 2f;          // Speed at which processes move up
 
-    private float stopHeight;
-    private float initialSpawnY = 0f;
+    [Header("UI Elements")]
+    public Dropdown spriteDropdown;       // Dropdown to select the sprite
+    public Dropdown processingTimeDropdown; // Dropdown for selecting processing time
+    public Button addButton;              // Button to add a process
+    public Button startSimulationButton;  // Button to start the FCFS simulation
+    public Text resultsText;              // UI Text to display results
 
-    private bool isFCFS = true; 
-
-    public Button fcfsButton; // Button to select FCFS
-    public Button srtfButton; // Button to select SRTF
-    public Button startButton; // Button to start the simulation
-
-    
-    private Color[] rowColors = new Color[]
-    {
-        Color.red,
-        Color.green,
-        Color.blue,
-        Color.yellow,
-        Color.cyan,
-        Color.magenta,
-        Color.white,
-    };
+    private List<Process> processes = new List<Process>(); // List to store processes
+    private int spawnCount = 0;           // Tracks position of spawned processes in a row
+    private bool isProcessing = false;    // Flag to indicate if a process is being executed
+    private float currentTime = 0f;       // Tracks simulation time
 
     void Start()
     {
-        float screenHeight = Camera.main.orthographicSize * 2;
-        stopHeight = screenHeight * 0.35f;
-        initialSpawnY = Camera.main.ViewportToWorldPoint(new Vector3(0, 0, Camera.main.nearClipPlane)).y + 1f;
+        // Populate dropdowns with options
+        PopulateSpriteDropdown();
+        PopulateProcessingTimeDropdown();
 
-        
-        fcfsButton.onClick.AddListener(SelectFCFS);
-        srtfButton.onClick.AddListener(SelectSRTF);
-        startButton.onClick.AddListener(StartSimulation);
+        // Set up the Add button to call AddProcess when clicked
+        addButton.onClick.AddListener(AddProcess);
+
+        // Set up the Start Simulation button to begin FCFS processing
+        startSimulationButton.onClick.AddListener(StartFCFSSimulation);
     }
 
-    void Update()
+    // Populate the sprite dropdown with sprite names
+    void PopulateSpriteDropdown()
     {
-        
-        if (Input.GetKeyDown(KeyCode.Space))
+        spriteDropdown.ClearOptions();
+        List<string> options = new List<string>();
+
+        for (int i = 0; i < processSprites.Length; i++)
         {
-            SpawnSingleSquare();
+            options.Add("Sprite " + (i + 1)); // Add custom names as options
         }
 
-        
-        if (Input.GetKeyDown(KeyCode.Return))
+        spriteDropdown.AddOptions(options);
+    }
+
+    // Populate the processing time dropdown with options from 1 to 6
+    void PopulateProcessingTimeDropdown()
+    {
+        processingTimeDropdown.ClearOptions();
+        List<string> options = new List<string>();
+
+        for (int i = 1; i <= 6; i++)
         {
-            StartNewRow();
+            options.Add(i + " seconds");
         }
 
-        
-        if (isSpawningActive)
-        {
-            if (isFCFS)
-                ProcessFCFS();
-            else
-                ProcessSRTF();
-        }
+        processingTimeDropdown.AddOptions(options);
     }
 
-    void SelectFCFS()
+    // Method to add a new process based on user input
+    void AddProcess()
     {
-        isFCFS = true;
-        Debug.Log("Selected FCFS scheduling");
-    }
+        // Get the selected sprite index from the dropdown
+        int selectedSpriteIndex = spriteDropdown.value;
 
-    void SelectSRTF()
-    {
-        isFCFS = false;
-        Debug.Log("Selected SRTF scheduling");
-    }
+        // Get the selected processing time from the dropdown
+        int selectedProcessingTimeIndex = processingTimeDropdown.value;
+        float processingTime = selectedProcessingTimeIndex + 1; // Dropdown indices start at 0 (1 second = index 0)
 
-    void StartSimulation()
-    {
-        isSpawningActive = true;
-        Debug.Log("Simulation started");
-    }
-
-    void SpawnSingleSquare()
-    {
-        
-        if (spawnCount >= 5)
-        {
-            StartNewRow();
-        }
-
-        
-        float spawnY = initialSpawnY + (1 * spacing);
-        float spawnX = spawnCount * spacing;
+        // Calculate spawn position based on the row and column
+        float spawnX = spawnCount * spacing; // Position along the X-axis
+        float spawnY = -4.5f;  // Fixed Y position at the bottom of the screen
 
         Vector3 spawnPosition = new Vector3(spawnX, spawnY, 0);
-        GameObject square = Instantiate(objectToSpawn, spawnPosition, Quaternion.identity);
 
-        
-        if (rows.Count > 0)
-        {
-            square.GetComponent<Renderer>().material.color = GetRowColor(rows.Count);
-        }
+        // Instantiate the selected sprite as the process
+        GameObject selectedSprite = Instantiate(processSprites[selectedSpriteIndex], spawnPosition, Quaternion.identity);
 
-        if (rows.Count == 0 || spawnCount == 0)
-            rows.Add(new RowData { squares = new List<GameObject>(), spawnTime = Time.time });
+        // Create a new process instance and add it to the list
+        Process newProcess = new Process(selectedSprite, processingTime, currentTime);
+        processes.Add(newProcess);
 
-        rows[rows.Count - 1].squares.Add(square);
+        // Increment spawn count for horizontal placement
         spawnCount++;
     }
 
-    void StartNewRow()
+    // Start the FCFS simulation
+    void StartFCFSSimulation()
     {
-        // Reset the spawn count for a new row
-        spawnCount = 0;
-    }
-
-    void ProcessFCFS()
-    {
-        if (rows.Count > 0)
+        if (!isProcessing && processes.Count > 0)
         {
-            RowData currentRow = rows[0];
-
-            // Move squares upward
-            foreach (var square in currentRow.squares)
-            {
-                float newYPosition = square.transform.position.y + (moveSpeed * Time.deltaTime);
-                if (newYPosition > stopHeight) newYPosition = stopHeight;
-                square.transform.position = new Vector3(square.transform.position.x, newYPosition, 0);
-            }
-
-            // Check if the current row has reached the stop height
-            if (currentRow.IsAtStopHeight(stopHeight))
-            {
-                StartCoroutine(VanishRow(currentRow));
-                rows.RemoveAt(0);
-            }
+            StartCoroutine(ProcessFCFS());
         }
     }
 
-    void ProcessSRTF()
+    // Coroutine to process tasks in FCFS order
+    IEnumerator ProcessFCFS()
     {
-        if (rows.Count > 0)
-        {
-            RowData shortestRow = null;
-            float shortestRemainingTime = Mathf.Infinity;
+        isProcessing = true;
 
-            foreach (var row in rows)
+        foreach (var process in processes)
+        {
+            // Move the process up to simulate execution
+            float targetY = process.processObject.transform.position.y + 3f; // Move up by 3 units
+            while (process.processObject.transform.position.y < targetY)
             {
-                float remainingTime = row.GetRemainingTime(stopHeight, moveSpeed);
-                if (remainingTime < shortestRemainingTime)
-                {
-                    shortestRemainingTime = remainingTime;
-                    shortestRow = row;
-                }
+                process.processObject.transform.position += Vector3.up * moveSpeed * Time.deltaTime;
+                yield return null;
             }
 
-            if (shortestRow != null)
-            {
-                // Move squares upward
-                foreach (var square in shortestRow.squares)
-                {
-                    float newYPosition = square.transform.position.y + (moveSpeed * Time.deltaTime);
-                    if (newYPosition > stopHeight) newYPosition = stopHeight;
-                    square.transform.position = new Vector3(square.transform.position.x, newYPosition, 0);
-                }
+            // Simulate processing time
+            Debug.Log($"Processing {process.processObject.name} for {process.processingTime} seconds...");
+            yield return new WaitForSeconds(process.processingTime);
 
-                // Check if the shortest row has reached the stop height
-                if (shortestRow.IsAtStopHeight(stopHeight))
-                {
-                    StartCoroutine(VanishRow(shortestRow));
-                    rows.Remove(shortestRow);
-                }
-            }
-        }
-    }
+            // Calculate completion time, turnaround time, and waiting time
+            process.completionTime = currentTime + process.processingTime;
+            process.turnaroundTime = process.completionTime - process.arrivalTime;
+            process.waitingTime = process.turnaroundTime - process.processingTime;
 
-    IEnumerator VanishRow(RowData row)
-    {
-        float vanishDelay = 1.5f;
-        row.turnaroundTime = Time.time - row.spawnTime;
-
-        foreach (GameObject square in row.squares)
-        {
-            yield return new WaitForSeconds(vanishDelay);
-            Destroy(square);
+            
+            // Increment simulation time
+            currentTime += process.processingTime;
         }
 
-        Debug.Log("Row Waiting Time: " + row.GetWaitingTime() + ", Turnaround Time: " + row.turnaroundTime);
+        // Calculate and display averages
+        DisplayResults();
 
-        if (rows.Count == 0) CalculateAverageTimes();
+        isProcessing = false;
+        Debug.Log("FCFS Simulation Completed!");
     }
 
-    void CalculateAverageTimes()
+    // Display results (waiting times, turnaround times, averages)
+    void DisplayResults()
     {
         float totalWaitingTime = 0f;
         float totalTurnaroundTime = 0f;
 
-        foreach (RowData row in rows)
+        resultsText.text = "Process Results:\n";
+
+        foreach (var process in processes)
         {
-            totalWaitingTime += row.GetWaitingTime();
-            totalTurnaroundTime += row.turnaroundTime;
+            resultsText.text += $"{process.processObject.name}: " +
+                                $"WT = {process.waitingTime:F2}, " +
+                                $"TAT = {process.turnaroundTime:F2}\n";
+
+            totalWaitingTime += process.waitingTime;
+            totalTurnaroundTime += process.turnaroundTime;
         }
 
-        float avgWaitingTime = totalWaitingTime / rows.Count;
-        float avgTurnaroundTime = totalTurnaroundTime / rows.Count;
+        float avgWaitingTime = totalWaitingTime / processes.Count;
+        float avgTurnaroundTime = totalTurnaroundTime / processes.Count;
 
-        Debug.Log("Average Waiting Time: " + avgWaitingTime);
-        Debug.Log("Average Turnaround Time: " + avgTurnaroundTime);
-    }
-
-    Color GetRowColor(int rowIndex)
-    {
-        // Return a color based on the row index, cycling through the rowColors array
-        return rowColors[rowIndex % rowColors.Length];
+        resultsText.text += $"\nAverage Waiting Time: {avgWaitingTime:F2}\n";
+        resultsText.text += $"Average Turnaround Time: {avgTurnaroundTime:F2}";
     }
 }
 
-public class RowData
+[System.Serializable]
+public class Process
 {
-    public List<GameObject> squares = new List<GameObject>();
-    public float spawnTime;
+    public GameObject processObject;
+    public float processingTime;
+    public float arrivalTime;
+    public float completionTime;
     public float turnaroundTime;
+    public float waitingTime;
 
-    public bool IsAtStopHeight(float stopHeight)
+    public Process(GameObject processObject, float processingTime, float arrivalTime)
     {
-        return squares.TrueForAll(square => square.transform.position.y >= stopHeight);
-    }
-
-    public float GetRemainingTime(float stopHeight, float moveSpeed)
-    {
-        float maxDistance = Mathf.Max(squares.ConvertAll(square => stopHeight - square.transform.position.y).ToArray());
-        return maxDistance / moveSpeed;
-    }
-
-    public float GetWaitingTime()
-    {
-        return turnaroundTime - (squares.Count * 1.5f);
+        this.processObject = processObject;
+        this.processingTime = processingTime;
+        this.arrivalTime = arrivalTime;
     }
 }
