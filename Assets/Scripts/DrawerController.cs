@@ -2,24 +2,21 @@ using UnityEngine;
 
 public class DrawerController : MonoBehaviour
 {
-    public static DrawerController Instance;
+    public static DrawerController Instance; // Singleton instance
 
-    private bool[] flag = new bool[2] { false, false }; // Flags for Peterson’s Algorithm
-    private int turn = 0; // Variable to determine whose turn it is
+    public bool[] Flag = new bool[2]; // Flags for both tellers
+    public int Turn; // Shared turn variable
 
     private void Awake()
     {
+        // Ensure only one instance of DrawerController exists
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);
         }
         else
         {
             Destroy(gameObject);
         }
     }
-
-    public bool[] Flag => flag; // Accessor for the flag array
-    public int Turn { get => turn; set => turn = value; } // Accessor for turn
 }
