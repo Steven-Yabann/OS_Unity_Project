@@ -7,6 +7,7 @@ public class Teller : MonoBehaviour
     public int tellerId; // Unique ID for this teller (0 or 1)
     public TextMeshPro cashDrawerText; // Reference to the cash drawer's TextMeshPro
     public TextMeshPro tellerStatusText; // Reference to this teller's status text
+    public TextMeshPro debugText; // Reference to DebugText for real-time updates
 
     private void Start()
     {
@@ -40,6 +41,9 @@ public class Teller : MonoBehaviour
         DrawerController.Instance.Flag[tellerId] = true;
         DrawerController.Instance.Turn = otherTeller;
 
+        // Update debug text
+        UpdateDebugText();
+
         // Wait until it’s this teller’s turn or the other teller isn’t interested
         while (DrawerController.Instance.Flag[otherTeller] &&
                DrawerController.Instance.Turn == otherTeller)
@@ -51,5 +55,17 @@ public class Teller : MonoBehaviour
     private void ExitCriticalSection()
     {
         DrawerController.Instance.Flag[tellerId] = false;
+
+        // Update debug text
+        UpdateDebugText();
+    }
+
+    private void UpdateDebugText()
+    {
+        bool[] flags = DrawerController.Instance.Flag; // Access flag array
+        int turn = DrawerController.Instance.Turn; // Access turn variable
+
+        // Format and update the debug text
+        debugText.text = $"Flag[0]: {flags[0]}\nFlag[1]: {flags[1]}\nTurn: {turn}";
     }
 }
