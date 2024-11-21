@@ -624,7 +624,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
+  m_BackGroundColor: {r: 0.20389818, g: 0.5471698, b: 0.5302006, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -3027,7 +3027,10 @@ MonoBehaviour:
   processingTimeDropdown: {fileID: 2043017580}
   addButton: {fileID: 1002933796}
   startSimulationButton: {fileID: 158062556}
+  resetButton: {fileID: 0}
   resultsText: {fileID: 738140490}
+  cpuSprite: {fileID: 0}
+  cpuMoveSpeed: 2
 --- !u!1 &1658250896
 GameObject:
   m_ObjectHideFlags: 0
