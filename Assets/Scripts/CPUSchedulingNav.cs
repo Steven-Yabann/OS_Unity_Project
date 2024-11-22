@@ -17,4 +17,8 @@ public class CPUSchedulingNav : MonoBehaviour
     {
         SceneManager.LoadScene("CPU_Menu");
     }
+    public void MainMenu()
+    {
+        SceneManager.LoadScene("MainMenu");
+    }
 }

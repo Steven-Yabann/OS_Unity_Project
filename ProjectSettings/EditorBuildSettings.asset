@@ -14,6 +14,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/SjfScene.unity
     guid: 9ef4958a97d484f88b0e0811af2f09d2
+  - enabled: 1
+    path: Assets/Scenes/MainMenu.unity
+    guid: d5659a5a8a03b458083e43d77e8bb84b
+  - enabled: 1
+    path: Assets/Scenes/Process_Synchronisation.unity
+    guid: 4366aa971531fd941b6f0b339d780b84
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0
