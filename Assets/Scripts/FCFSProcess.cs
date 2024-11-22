@@ -6,133 +6,97 @@ using System.Collections.Generic;
 public class CPUProcessSimulator : MonoBehaviour
 {
     [Header("Process Settings")]
-    public GameObject[] processSprites;   // Array of available sprites
-    public float spacing = 2f;            // Horizontal spacing between processes
-    public float moveSpeed = 2f;          // Speed at which processes move up
+    public GameObject[] processSprites;  
+    public float spacing = 2f;           
+    public float moveSpeed = 2f;         
 
     [Header("CPU Settings")]
-    public GameObject cpuSprite;  // CPU sprite or object
+    public GameObject cpuSprite;  
     public float cpuMoveSpeed = 2f;
 
     [Header("UI Elements")]
-    public Dropdown spriteDropdown;       // Dropdown to select the sprite
-    public Dropdown processingTimeDropdown; // Dropdown for selecting processing time
-    public Button addButton;              // Button to add a process
-    public Button startSimulationButton;  // Button to start the FCFS simulation
-    public Button resetButton;            // Button to reset the simulation
-    public Text resultsText;              // UI Text to display results
+    public Dropdown spriteDropdown;       
+    public Dropdown processingTimeDropdown; 
+    public Button addButton;              
+    public Button startSimulationButton;  
+    public Button resetButton;            
+    public Text resultsText;              
 
-    private List<Process> processes = new List<Process>(); // List to store processes
-    private int spawnCount = 0;           // Tracks position of spawned processes in a row
-    private bool isProcessing = false;    // Flag to indicate if a process is being executed
-    private float currentTime = 0f;       // Tracks simulation time
+    private List<Process> processes = new List<Process>();
+    private int spawnCount = 0;           
+    private bool isProcessing = false;    
+    private float currentTime = 0f;       
 
     void Start()
     {
-        // Populate dropdowns with options
         PopulateSpriteDropdown();
         PopulateProcessingTimeDropdown();
 
-        // Set up the Add button to call AddProcess when clicked
         addButton.onClick.AddListener(AddProcess);
-
-        // Set up the Start Simulation button to begin FCFS processing
         startSimulationButton.onClick.AddListener(StartFCFSSimulation);
-
-        // Set up the Reset button to reset the simulation
         resetButton.onClick.AddListener(ResetSimulation);
 
         cpuSprite.transform.position = new Vector3(-6f, 0f, 0f);
     }
 
-    // Populate the sprite dropdown with sprite names
     void PopulateSpriteDropdown()
     {
         spriteDropdown.ClearOptions();
         List<string> options = new List<string>();
-
         foreach (GameObject sprite in processSprites)
         {
-            // Use the GameObject's name as the dropdown option
             options.Add(sprite.name);
         }
-
         spriteDropdown.AddOptions(options);
     }
 
-    // Populate the processing time dropdown with options from 1 to 6
     void PopulateProcessingTimeDropdown()
     {
         processingTimeDropdown.ClearOptions();
         List<string> options = new List<string>();
-
         for (int i = 1; i <= 6; i++)
         {
             options.Add(i + " seconds");
         }
-
         processingTimeDropdown.AddOptions(options);
     }
 
-    // Method to add a new process based on user input
     void AddProcess()
     {
-        if (spriteDropdown.value < 0 || processingTimeDropdown.value < 0)
-        {
-            Debug.LogWarning("Invalid input: Please select a sprite and processing time.");
-            return;
-        }
-
-        // Get the selected sprite index from the dropdown
         int selectedSpriteIndex = spriteDropdown.value;
-
-        // Get the selected processing time from the dropdown
         int selectedProcessingTimeIndex = processingTimeDropdown.value;
         float processingTime = selectedProcessingTimeIndex + 1;
 
-        // Calculate spawn position based on the row and column
-        float spawnX = spawnCount * spacing; // Position along the X-axis
-        float spawnY = -4.5f;  // Fixed Y position at the bottom of the screen
+        float spawnX = spawnCount * spacing;
+        float spawnY = -4.5f;
 
         Vector3 spawnPosition = new Vector3(spawnX, spawnY, 0);
-
-        // Instantiate the selected sprite as the process
         GameObject selectedSprite = Instantiate(processSprites[selectedSpriteIndex], spawnPosition, Quaternion.identity);
 
-        // Add a label to show status, process number, and processing time
         GameObject statusText = new GameObject("StatusText");
-        statusText.transform.SetParent(selectedSprite.transform); // Parent the text to the sprite
+        statusText.transform.SetParent(selectedSprite.transform);
 
-        // Add and configure the TextMesh component
         TextMesh textMesh = statusText.AddComponent<TextMesh>();
         textMesh.text = $"P{spawnCount + 1}\nWaiting\nBurst Time: {processingTime}s";
-        textMesh.fontSize = 15; // Smaller font size
-        textMesh.color = Color.white; // Set font color to white
-        textMesh.anchor = TextAnchor.MiddleCenter; // Center align the text
+        textMesh.fontSize = 15; 
+        textMesh.color = Color.white; 
+        textMesh.anchor = TextAnchor.MiddleCenter; 
 
         statusText.transform.localScale = new Vector3(0.15f, 0.15f, 0.15f);
+        statusText.transform.localPosition = new Vector3(0, 1.2f, 0); 
 
-        // Position the text above the sprite
-        statusText.transform.localPosition = new Vector3(0, 1.2f, 0); // Adjust Y position for better spacing
-
-        // Create a new process instance and add it to the list
         Process newProcess = new Process(selectedSprite, processingTime, currentTime);
         processes.Add(newProcess);
 
-        // Increment spawn count for horizontal placement
         spawnCount++;
     }
 
-    // Coroutine to move the CPU towards the process
     IEnumerator MoveCPUTowardsProcess(float targetX)
     {
-        Debug.Log("Moving CPU towards X: " + targetX);  // Debug log to verify
-
         float startX = cpuSprite.transform.position.x;
         float elapsedTime = 0f;
-        float duration = 1f;  // Increase duration to make it slower
+        float duration = 1f;
 
-        // Move the CPU from its current position to the process's position
         while (elapsedTime < duration)
         {
             float newX = Mathf.Lerp(startX, targetX, (elapsedTime / duration));
@@ -141,18 +105,15 @@ public class CPUProcessSimulator : MonoBehaviour
             yield return null;
         }
 
-        cpuSprite.transform.position = new Vector3(targetX, cpuSprite.transform.position.y, cpuSprite.transform.position.z);  // Final position
+        cpuSprite.transform.position = new Vector3(targetX, cpuSprite.transform.position.y, cpuSprite.transform.position.z);
     }
 
-
-    // Coroutine to move the process smoothly
     IEnumerator MoveProcessSmoothly(GameObject process, float targetY)
     {
         float startY = process.transform.position.y;
         float elapsedTime = 0f;
-        float duration = 1f;  // Duration of the movement (you can adjust this to control speed)
+        float duration = 1f;
 
-        // Move the process from its current position to the target Y position
         while (elapsedTime < duration)
         {
             process.transform.position = Vector3.Lerp(new Vector3(process.transform.position.x, startY, 0),
@@ -162,13 +123,9 @@ public class CPUProcessSimulator : MonoBehaviour
             yield return null;
         }
 
-        // Ensure the process ends up exactly at the target Y position
         process.transform.position = new Vector3(process.transform.position.x, targetY, 0);
     }
 
-
-
-    // Start the FCFS simulation
     void StartFCFSSimulation()
     {
         if (!isProcessing && processes.Count > 0)
@@ -177,51 +134,43 @@ public class CPUProcessSimulator : MonoBehaviour
         }
     }
 
-    // Coroutine to process tasks in FCFS order
     IEnumerator ProcessFCFS()
     {
         isProcessing = true;
 
         foreach (var process in processes)
         {
-            Debug.Log("Moving CPU to process " + process.processObject.name);
             float cpuTargetX = process.processObject.transform.position.x;
             yield return StartCoroutine(MoveCPUTowardsProcess(cpuTargetX));
 
-            // Highlight the process being executed
-            SpriteRenderer spriteRenderer = process.processObject.GetComponent<SpriteRenderer>();
             TextMesh statusText = process.processObject.GetComponentInChildren<TextMesh>();
-
-            if (spriteRenderer != null)
-            {
-                // spriteRenderer.color = Color.yellow; // Highlight in yellow
-            }
             if (statusText != null)
             {
-                statusText.text = $"P{spawnCount}\nExecuting\nTime: {process.processingTime}s";
-                // statusText.color = Color.green; // Green for executing
+                statusText.text = $"P{spawnCount}\nExecuting\nTime Left: {process.processingTime}s";
+                statusText.color = Color.green;
             }
 
-            // Move the process up to simulate execution
-            float targetY = process.processObject.transform.position.y + 3f; // Move up by 3 units
+            float targetY = process.processObject.transform.position.y + 3f;
             yield return StartCoroutine(MoveProcessSmoothly(process.processObject, targetY));
 
-            // Simulate processing time
-            Debug.Log($"Processing {process.processObject.name} for {process.processingTime} seconds...");
-            yield return new WaitForSeconds(process.processingTime);
-
-            // Reset the highlight and update status
-            if (spriteRenderer != null)
+            float remainingTime = process.processingTime;
+            while (remainingTime > 0)
             {
-                spriteRenderer.color = Color.white; // Reset to default color
+                if (statusText != null)
+                {
+                    statusText.text = $"P{spawnCount}\nExecuting\nTime Left: {remainingTime.ToString("0.##")}s";
+                }
+
+                remainingTime -= Time.deltaTime;
+                yield return null;
             }
+
             if (statusText != null)
             {
-                statusText.text = $"P{spawnCount}\nCompleted\nTime: {process.processingTime}s";
-                // statusText.color = Color.blue; // Blue for completed
+                statusText.text = $"P{spawnCount}\nCompleted\nTime: {process.processingTime.ToString("0.##")}s";
+                statusText.color = Color.gray;
             }
 
-            // Calculate completion time, turnaround time, and waiting time
             process.completionTime = currentTime + process.processingTime;
             process.turnaroundTime = process.completionTime - process.arrivalTime;
             process.waitingTime = process.turnaroundTime - process.processingTime;
@@ -229,16 +178,11 @@ public class CPUProcessSimulator : MonoBehaviour
             currentTime += process.processingTime;
         }
 
-        // Calculate and display averages
         DisplayResults();
 
         isProcessing = false;
-        Debug.Log("FCFS Simulation Completed!");
     }
 
-
-
-    // Display results (waiting times, turnaround times, averages)
     void DisplayResults()
     {
         float totalWaitingTime = 0f;
@@ -263,27 +207,24 @@ public class CPUProcessSimulator : MonoBehaviour
         resultsText.text += $"Average Turnaround Time: {avgTurnaroundTime:F2}";
     }
 
-    // Reset the simulation
     void ResetSimulation()
     {
         StopAllCoroutines();
         isProcessing = false;
 
+        cpuSprite.transform.position = new Vector3(-6f, 0f, 0f);
+
         foreach (var process in processes)
         {
             Destroy(process.processObject);
         }
-        processes.Clear();
 
+        processes.Clear();
         resultsText.text = "Process Results:\n";
         currentTime = 0f;
         spawnCount = 0;
-
-        Debug.Log("Simulation Reset!");
     }
 }
-
-
 
 [System.Serializable]
 public class Process
