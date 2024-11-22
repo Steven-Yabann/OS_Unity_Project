@@ -7,6 +7,7 @@ public class SimulationController : MonoBehaviour
     public Button restartButton;
     public Teller teller1;
     public Teller teller2;
+    public Teller teller3;
 
     void Start()
     {

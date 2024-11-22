@@ -4,7 +4,7 @@ using System.Collections;
 
 public class Teller : MonoBehaviour
 {
-    public int tellerId; // Unique ID for this teller (0 or 1)
+    public int tellerId; // Unique ID for this teller (0, 1, or 2)
     public TextMeshPro cashDrawerText; // Reference to the cash drawer's TextMeshPro
     public TextMeshPro tellerStatusText; // Reference to this teller's status text
     public TextMeshPro debugText; // Reference to DebugText for real-time updates
@@ -37,16 +37,14 @@ public class Teller : MonoBehaviour
 
     private IEnumerator EnterCriticalSection()
     {
-        int otherTeller = 1 - tellerId; // Determine the other teller's ID
         DrawerController.Instance.Flag[tellerId] = true;
-        DrawerController.Instance.Turn = otherTeller;
+        DrawerController.Instance.Turn = (tellerId + 1) % 3; // Determine the next teller's turn
 
         // Update debug text
         UpdateDebugText();
 
-        // Wait until it’s this teller’s turn or the other teller isn’t interested
-        while (DrawerController.Instance.Flag[otherTeller] &&
-               DrawerController.Instance.Turn == otherTeller)
+        // Wait until it’s this teller’s turn or no other teller is interested
+        while (AnyOtherTellerInterested() && DrawerController.Instance.Turn != tellerId)
         {
             yield return null; // Non-blocking wait
         }
@@ -60,12 +58,22 @@ public class Teller : MonoBehaviour
         UpdateDebugText();
     }
 
+    private bool AnyOtherTellerInterested()
+    {
+        // Check if any other teller is interested in the critical section
+        for (int i = 0; i < DrawerController.Instance.Flag.Length; i++)
+        {
+            if (i != tellerId && DrawerController.Instance.Flag[i]) return true;
+        }
+        return false;
+    }
+
     private void UpdateDebugText()
     {
         bool[] flags = DrawerController.Instance.Flag; // Access flag array
         int turn = DrawerController.Instance.Turn; // Access turn variable
 
         // Format and update the debug text
-        debugText.text = $"Flag[0]: {flags[0]}\nFlag[1]: {flags[1]}\nTurn: {turn}";
+        debugText.text = $"Flag[0]: {flags[0]}\nFlag[1]: {flags[1]}\nFlag[2]: {flags[2]}\nTurn: {turn}";
     }
 }
