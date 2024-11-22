@@ -4,7 +4,7 @@ public class DrawerController : MonoBehaviour
 {
     public static DrawerController Instance; // Singleton instance
 
-    public bool[] Flag = new bool[2]; // Flags for both tellers
+    public bool[] Flag = new bool[3]; // Flags for all three tellers
     public int Turn; // Shared turn variable
 
     private void Awake()
